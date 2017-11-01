@@ -22,6 +22,7 @@ import subprocess
 from Bio.Align.Applications import MuscleCommandline
 
 import matplotlib.pyplot as plt 
+import os
 
 class Tree:
     def __init__(self, i, msa=None, left=None, right=None):
@@ -72,6 +73,7 @@ class Tree:
             for s2 in align[l1:]:
                 score += blosum_score(s1.seq,s2.seq)
         dist = float(score)/float(l1*l2)
+        os.remove('tmp.fa')
         return dist
 
 
@@ -95,7 +97,7 @@ class Tree:
                 
 
 def blosum_score(seq1, seq2, gap_creation = -4, gap_extension = -2):
-    blosum = pd.read_csv('blosum62.qij',sep='\t', header=0, index_col=0)
+    blosum = pd.read_csv('blosum62.txt',sep='\t', header=0, index_col=0)
     score = 0
     gapped = False
     for i in range(len(seq1)):

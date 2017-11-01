@@ -66,7 +66,7 @@ def init_distances(sequences=None, MSA=None, distance='blast'):
 
 
 def blosum_score(seq1, seq2, gap_creation = -4, gap_extension = -2):
-    blosum = pd.read_csv('blosum62.qij',sep='\t', header=0, index_col=0)
+    blosum = pd.read_csv('blosum62.txt',sep='\t', header=0, index_col=0)
     score = 0
     gapped = False
     for i in range(len(seq1)):
@@ -127,8 +127,7 @@ def show(tree, level):
     return ret
 
 
-def toNewick(clusters):
-    tree = clusters[clusters.keys()[0]]
+def toNewick(tree):
     if tree.depth()==0:
         return str(tree.id)
     else:
@@ -162,16 +161,23 @@ def toTreePerso(tree):
     return nodes[min(nodes.keys())]
 
 
-def show_tree(newick):
-    handle = open('tree.dnd','w')
+def show_tree(newick, name=None):
+    if name:
+        filename = name+'_tree.dnd'
+    else:
+        filename = 'tree.dnd'
+    handle = open(filename,'w')
     handle.write(newick)
     handle.close()
 
-    tree = Phylo.read("tree.dnd", "newick")
+    tree = Phylo.read(filename, "newick")
     Phylo.draw_ascii(tree)
     Phylo.draw(tree)
 
-def main(seqs, type, dist):
+def main(file, type, dist):
+
+    name = file.split('/')[-1].split('.')[0]
+    seqs = list(SeqIO.parse(file, "fasta",alphabet = Alphabet.Gapped(IUPAC.protein)))
     
     if type == 'single':
         dist = init_distances(seqs,distance = dist)
@@ -212,13 +218,13 @@ def main(seqs, type, dist):
             dist = compute_distances(clusters, update=(i1,i2,cluster_id), dist=dist)
             cluster_id += -1        
 
-    newick = toNewick(clusters)
-    show_tree(newick)
+    tree = clusters[list(clusters.keys())[0]]
+    newick = toNewick(tree)
+    show_tree(newick, name=name)
 
 
 if __name__ == "__main__":
 
-    globins = list(SeqIO.parse("globins.fa", "fasta",alphabet = Alphabet.Gapped(IUPAC.protein)))
-    main(globins, type="centroid", dist='blosum')
+    main("test/globins.fa", type="centroid", dist='blosum')
     
     
