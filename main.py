@@ -39,7 +39,7 @@ def init_clusters(sequences=None, MSA=None):
 
 
 def init_distances(sequences=None, MSA=None, distance='blast'):
-    matrix = np.matrix([[0 for col in range(len(sequences))] for row in range(len(sequences))])
+    matrix = np.matrix([[-math.inf for col in range(len(sequences))] for row in range(len(sequences))])
     if sequences:
         for i in range(len(sequences)):
             s1 = sequences[i]
@@ -93,7 +93,6 @@ def blosum_score(seq1, seq2, gap_creation = -4, gap_extension = -2):
 def compute_distances(clusters, update=None, dist=None):
     if dist is not None and update is not None:
         i,j,new_id = update
-        print(i,j)
         matrix = dist.drop([i,j],axis=0)
         matrix = matrix.drop([i,j],axis=1)
 
@@ -105,15 +104,19 @@ def compute_distances(clusters, update=None, dist=None):
                 d = clusters[new_id].distance(clusters[k])
                 matrix.loc[new_id,k] = d
                 matrix.loc[k,new_id] = d
+            else:
+                matrix.loc[k,k] = -math.inf
 
     else:
-        matrix = pd.DataFrame([[0 for col in range(len(clusters))] for row in range(len(clusters))])
+        matrix = pd.DataFrame([[-math.inf for col in range(len(clusters))] for row in range(len(clusters))])
         for i in clusters.keys():
             for j in clusters.keys():
                 if j > i:
                     d = clusters[i].distance(clusters[j])
                     matrix.loc[i,j] =  d
                     matrix.loc[j,i] = d  
+                elif j == i:
+                    matrix.loc[i,i] = -math.inf
     return matrix
 
   
@@ -166,11 +169,11 @@ def show_tree(newick, name=None):
         filename = name+'_tree.dnd'
     else:
         filename = 'tree.dnd'
-    handle = open(filename,'w')
+    handle = open('results/'+filename,'w')
     handle.write(newick)
     handle.close()
 
-    tree = Phylo.read(filename, "newick")
+    tree = Phylo.read('results/'+filename, "newick")
     Phylo.draw_ascii(tree)
     Phylo.draw(tree)
 
@@ -197,8 +200,9 @@ def main(file, type, dist):
             # select the minimum of distances
             print(dist)
             maxs = dist.idxmax()
+            print(maxs)
             i1,i2 = -1,-1
-            m = 0
+            m = -math.inf
             for i in maxs.index:
                 if dist.loc[i,maxs[i]]>m:
                     i1 = i
@@ -206,6 +210,8 @@ def main(file, type, dist):
                     m = dist.loc[i,maxs[i]]
 
             # define the centroid of the new cluster from the previous clusters
+            print(i1, i2)
+            print(cluster_id)
             new_tree = clusters[i1].centroid(clusters[i2],i=cluster_id)
 
             # remove the clustered we joined of the cluster list 
@@ -225,6 +231,6 @@ def main(file, type, dist):
 
 if __name__ == "__main__":
 
-    main("test/globins.fa", type="centroid", dist='blosum')
+    main("test/MYD88_HUMAN.fa", type="centroid", dist='blosum')
     
     
