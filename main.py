@@ -97,7 +97,7 @@ def toNewick(tree):
     if tree.depth()==0:
         return str(tree.id)
     else:
-        return '('+toNewick(tree.left)+','+toNewick(tree.right)+')'
+        return '(\n'+toNewick(tree.left)+',\n'+toNewick(tree.right)+'\n)\n'
 
 
 def toTreePerso(tree):
@@ -184,10 +184,10 @@ def main(file, type, dist):
             cluster_id += -1        
 
     tree = clusters[list(clusters.keys())[0]]
-    newick = toNewick(tree)
+    newick = toNewick(tree) + ';'
     show_tree(newick, name=name)
 
 
 if __name__ == "__main__":
 
-    main("test/MYD88_HUMAN.fa", type="centroid", dist='blosum')
+    main("test/LRRD1_HUMAN.fa", type="centroid", dist='blosum')

@@ -76,6 +76,9 @@ class Tree:
             for s2 in align[l1:]:
                 score += blosum_score(s1.seq,s2.seq)
         dist = float(score)/float(len(self.msa)*len(tree.msa))
+
+        
+                
         os.remove('tmp.fa')
         return dist
 
