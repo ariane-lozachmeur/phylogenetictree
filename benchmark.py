@@ -1,6 +1,6 @@
 from ete3 import Tree
 
-target = 'LRRD1_HUMAN'
+target = 'MYD88_HUMAN'
 
 t1 = Tree(open('results/'+target+'_uniprot.dnd').read())
 t2 = Tree(open('results/'+target+'_tree.dnd').read())
