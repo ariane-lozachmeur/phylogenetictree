@@ -58,8 +58,10 @@ class Tree:
 
 
     def distance(self, tree):
-        l1 = len(self.msa)
-        l2 = len(tree.msa)
+        if str(self.id)<str(tree.id):
+            l1 = len(self.msa)
+        else:
+            l1 = len(tree.msa)
         score = 0
         seqs = self.msa.format("fasta") + tree.msa.format("fasta")
         with open("tmp.fa","w") as f:
@@ -69,10 +71,11 @@ class Tree:
         child = subprocess.Popen(str(muscle_cline),stdout=subprocess.PIPE,stderr=subprocess.PIPE, universal_newlines=True, shell=(sys.platform!="win32"))
         align = AlignIO.read(child.stdout, "fasta")
         align.sort()
+
         for s1 in align[:l1]:
             for s2 in align[l1:]:
                 score += blosum_score(s1.seq,s2.seq)
-        dist = float(score)/float(l1*l2)
+        dist = float(score)/float(len(self.msa)*len(tree.msa))
         os.remove('tmp.fa')
         return dist
 

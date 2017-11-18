@@ -20,49 +20,12 @@ from Bio.Align import AlignInfo
 from Bio.Align import MultipleSeqAlignment
 
 
-# Input: unaligned sequences or MSA
-# - Compute initial matrix of distances (A)
-# - Place each sequence in its own cluster
-# - While # clusters>1
-# o Join the 2 closest clusters (using the matrix of distances)
-# o Compute the new centroid representing this new cluster (B)
-# o Add this step to the tree (creation of the new link between 2 clusters)
-# o Update the matrix of distances
-# Output: phylogenetic tree
-
 def init_clusters(sequences=None, MSA=None):
     if sequences:
         print('Starting init clusters')
         return {i : perso.Tree(sequences[i].id, MultipleSeqAlignment([sequences[i]])) for i in range(len(sequences))}
     else:
         return None
-
-
-def init_distances(sequences=None, MSA=None, distance='blast'):
-    matrix = np.matrix([[-math.inf for col in range(len(sequences))] for row in range(len(sequences))])
-    if sequences:
-        for i in range(len(sequences)):
-            s1 = sequences[i]
-            for j in range(i+1,len(sequences)):
-                s2 = sequences[j]
-                alpha = Alphabet.Gapped(IUPAC.protein)
-                alignment = pairwise2.align.globalds(s1.seq, s2.seq, blosum62, -10, -0.5)
-                
-                if distance=='blast':
-                    dist = -alignment[0][2]
-                
-                elif distance=='blosum':
-                    seq1 = alignment[0][0]
-                    seq2 = alignment[0][1]
-                    dist = -blosum_score(seq1,seq2)
-
-                matrix.itemset((i, j), dist)
-                matrix.itemset((j,i),dist)
-
-    if MSA:
-        pass
-
-    return matrix
 
 
 def blosum_score(seq1, seq2, gap_creation = -4, gap_extension = -2):
@@ -198,9 +161,7 @@ def main(file, type, dist):
         cluster_id = -1
         while not len(clusters) == 1:
             # select the minimum of distances
-            print(dist)
             maxs = dist.idxmax()
-            print(maxs)
             i1,i2 = -1,-1
             m = -math.inf
             for i in maxs.index:
@@ -210,8 +171,6 @@ def main(file, type, dist):
                     m = dist.loc[i,maxs[i]]
 
             # define the centroid of the new cluster from the previous clusters
-            print(i1, i2)
-            print(cluster_id)
             new_tree = clusters[i1].centroid(clusters[i2],i=cluster_id)
 
             # remove the clustered we joined of the cluster list 
@@ -232,5 +191,3 @@ def main(file, type, dist):
 if __name__ == "__main__":
 
     main("test/MYD88_HUMAN.fa", type="centroid", dist='blosum')
-    
-    
