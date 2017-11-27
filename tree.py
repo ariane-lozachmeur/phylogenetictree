@@ -53,34 +53,77 @@ class Tree:
 
         else:
             for i in range(self.msa.get_alignment_length()):
-                profile.append(dict(collections.Counter(self.msa[seqs[0]:seqs[1],i])))            
+                profile.append(dict(collections.Counter(self.msa[seqs[0]:seqs[1],i])))      
+                      
         return profile        
 
 
+    # def distance(self, tree):
+        # if str(self.id)<str(tree.id):
+        #     l1 = len(self.msa)
+        # else:
+        #     l1 = len(tree.msa)
+        # score = 0
+        # seqs = self.msa.format("fasta") + tree.msa.format("fasta")
+        
+        # with open("tmp.fa","w") as f:
+        #     f.write(seqs)
+        
+        # muscle_cline = MuscleCommandline(input="tmp.fa")
+        # child = subprocess.Popen(str(muscle_cline),stdout=subprocess.PIPE,stderr=subprocess.PIPE, universal_newlines=True, shell=(sys.platform!="win32"))
+        # align = AlignIO.read(child.stdout, "fasta")
+        # align.sort()
+
+        # for s1 in align[:l1]:
+        #     for s2 in align[l1:]:
+        #         score += blosum_score(s1.seq,s2.seq)
+        # dist = float(score)/float(len(self.msa)*len(tree.msa))
+
+        
+                
+        # os.remove('tmp.fa')
+        # return dist
+
     def distance(self, tree):
+        d = 0
+
         if str(self.id)<str(tree.id):
-            l1 = len(self.msa)
+            test = True
         else:
-            l1 = len(tree.msa)
-        score = 0
-        seqs = self.msa.format("fasta") + tree.msa.format("fasta")
+            test = False
+
+        for s in tree.msa:
+            d += self.score_seq(s, test)
+
+        for s in self.msa:
+            d += tree.score_seq(s, not test)
+
+        dist = float(d)/float(len(self.msa)*len(tree.msa))
+
+        return dist
+
+    def score_seq(self, s, test):
+        d = 0
+        seqs = self.msa.format("fasta") + s.format("fasta")
+
         with open("tmp.fa","w") as f:
             f.write(seqs)
-        
+
         muscle_cline = MuscleCommandline(input="tmp.fa")
         child = subprocess.Popen(str(muscle_cline),stdout=subprocess.PIPE,stderr=subprocess.PIPE, universal_newlines=True, shell=(sys.platform!="win32"))
         align = AlignIO.read(child.stdout, "fasta")
         align.sort()
 
-        for s1 in align[:l1]:
-            for s2 in align[l1:]:
-                score += blosum_score(s1.seq,s2.seq)
-        dist = float(score)/float(len(self.msa)*len(tree.msa))
+        if test:
+            s2 = align[-1]
+            for s1 in align[:len(self.msa)]:
+                d += blosum_score(s1.seq,s2.seq)
+        else:
+            s2 = align[0]
+            for s1 in align[1:]:
+                d += blosum_score(s1.seq,s2.seq)
 
-        
-                
-        os.remove('tmp.fa')
-        return dist
+        return d
 
 
     def centroid(self,tree,i):

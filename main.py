@@ -53,7 +53,7 @@ def blosum_score(seq1, seq2, gap_creation = -4, gap_extension = -2):
     return score
 
 
-def compute_distances(clusters, update=None, dist=None):
+def compute_distances(clusters, update=None, dist=None, mode='seqs'):
     if dist is not None and update is not None:
         i,j,new_id = update
         matrix = dist.drop([i,j],axis=0)
@@ -64,7 +64,11 @@ def compute_distances(clusters, update=None, dist=None):
 
         for k in clusters.keys():
             if not new_id == k:
-                d = clusters[new_id].distance(clusters[k])
+                if mode = 'seqs':
+                    d = clusters[new_id].distance(clusters[k])
+                elif mode == 'msa':
+                    pass
+                    # TODO: figure out what to do
                 matrix.loc[new_id,k] = d
                 matrix.loc[k,new_id] = d
             else:
@@ -75,7 +79,11 @@ def compute_distances(clusters, update=None, dist=None):
         for i in clusters.keys():
             for j in clusters.keys():
                 if j > i:
-                    d = clusters[i].distance(clusters[j])
+                    if mode == 'seqs':
+                        d = clusters[i].distance(clusters[j])
+                    elif mode == 'msa':
+                        # TODO : check logic
+                        d = blosum_score(clusters[i][0,:],clusters[j][0,:])
                     matrix.loc[i,j] =  d
                     matrix.loc[j,i] = d  
                 elif j == i:
@@ -140,18 +148,23 @@ def show_tree(newick, name=None):
     Phylo.draw_ascii(tree)
     Phylo.draw(tree)
 
-def main(file, type, dist):
+def main(file, mode, type, dist):
 
     name = file.split('/')[-1].split('.')[0]
-    seqs = list(SeqIO.parse(file, "fasta",alphabet = Alphabet.Gapped(IUPAC.protein)))
+    if mode == 'seqs':
+        seqs = list(SeqIO.parse(file, "fasta",alphabet = Alphabet.Gapped(IUPAC.protein)))
     
+    elif mode == 'msa':
+        # TODO: read a file in a MSA
+        seqs = None
+
     if type == 'single':
-        dist = init_distances(seqs,distance = dist)
+        dist = compute_distances(seqs,distance = dist, mode=mode)
         tree = treecluster(distancematrix=dist, method='s')
         tree = toTreePerso(tree)
 
     elif type == 'average':
-        dist = init_distances(seqs,distance = dist)
+        dist = compute_distances(seqs,distance = dist, mode=mode)
         tree = treecluster(distancematrix=dist, method='a')
         tree = toTreePerso(tree)
 
@@ -190,4 +203,4 @@ def main(file, type, dist):
 
 if __name__ == "__main__":
 
-    main("test/LRRD1_HUMAN.fa", type="centroid", dist='blosum')
+    main("test/globins.fa", mode='seqs', type="centroid", dist='blosum')

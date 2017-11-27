@@ -1,0 +1,67 @@
+sp|P17970|KCNAB_DROME      MVGQLQGGQAAGQQQQQQQATQQQQHSKQQQQQQQQQQQQLQLKQHQQQQQDILYQQHNE
+sp|Q8BZN2|KCNV1_MOUSE      ------------------------------------------------------------
+                                                                                       
+
+sp|P17970|KCNAB_DROME      AIAIARGLQAATPADIGDNQPYYDTSGNVDWERAMGAGGAGAYGGIGIGSLPAAGGAAYH
+sp|Q8BZN2|KCNV1_MOUSE      ------------------------------------------------------------
+                                                                                       
+
+sp|P17970|KCNAB_DROME      LGPANPAGLVSRHLDYGDGGHLAGPSAGLPAGAVGSGAGAGAGAGASVTGSGSGAGTGTG
+sp|Q8BZN2|KCNV1_MOUSE      ------------------------------------------------------------
+                                                                                       
+
+sp|P17970|KCNAB_DROME      TGAGSGSGSGAAGKEVRYAPFPVASPTHSIPTTSQQIVGSVGGVGVGGASSQSISGGVPT
+sp|Q8BZN2|KCNV1_MOUSE      -------------------------------------------MDLSP------RNRPLL
+                                                                      :.:.        .    
+
+sp|P17970|KCNAB_DROME      HSQSNTTGALQRTHSRSMSSIPPPEPFMIAQSKAVNSRVSINVGGVRHEVLWRTLERLPH
+sp|Q8BZN2|KCNV1_MOUSE      DSSSLDSGSLTSLDSSVFCSEGEGEPL------ALGDCFTVNVGGSRFVLSQQALSCFPH
+                           .*.*  :*:*   .*  :.*    **:      *:.. .::**** *. :  ::*. :**
+
+sp|P17970|KCNAB_DROME      TRLGRLREC----------TTHEAIVELCDDYSLADNEYFFDRHPKSFSSILNFYRTGKL
+sp|Q8BZN2|KCNV1_MOUSE      TRLGKLAVVVASYRRLGALAAAPSPLELCDDANPVDNEYFFDRSSQAFRYVLHYYRTGRL
+                           ****:*             ::  : :***** . .********  ::*  :*::****:*
+
+sp|P17970|KCNAB_DROME      HIVDEMCVLAFSDDLEYWGVDELYLESCCQHKYHQRKENVHEE-MR--KEAESLRQRDEE
+sp|Q8BZN2|KCNV1_MOUSE      HVMEQLCALSFLQEIQYWGIDELSIDSCCRDRYFRRKELSETLDFKKDTDDQESQHESEQ
+                           *:::::*.*:* ::::***:*** ::***:.:*.:***  .   ::  .: :. ::..*:
+
+sp|P17970|KCNAB_DROME      EFGEGKFSEYQKYLWELLEKPNTSFAARVIAVISILFIVLSTIALTLNTLPQLQHIDNGT
+sp|Q8BZN2|KCNV1_MOUSE      DFSKGPCPTVRQKLWDILEKPGSSTAARIFGVISIIFVAVSIVNMALMSAE-L------S
+                           :*.:*     :: **::****.:* ***::.****:*:.:* : ::* :   *      :
+
+sp|P17970|KCNAB_DROME      PQDNPQLAMVEAVCITWFTLEYILRFSASPDKWKFFKGGLNIIDLLAILPYFVSLFLLET
+sp|Q8BZN2|KCNV1_MOUSE      WLNLQLLEILEYVCISWFTGEFVLRFLCVKDRCHFLRKVPNIIDLLAILPFYITLLVESL
+                             :   * ::* ***:*** *::*** .  *: :*::   **********::::*:: . 
+
+sp|P17970|KCNAB_DROME      N-KNATDQFQDVRRVVQVFRIMRILRVLKLARHSTGLQSLGFTLRNSYKELGLLMLFLAM
+sp|Q8BZN2|KCNV1_MOUSE      SGSHTTQELENVGRLVQVLRLLRALRMLKLGRHSTGLRSLGMTITQCYEEVGLLLLFLSV
+                           . .::*:::::* *:***:*::* **:***.******:***:*: :.*:*:***:***::
+
+sp|P17970|KCNAB_DROME      GVLIFSSLAYFAEKDEKDTKFVSIPEAFWWAGITMTTVGYGDICPTTALGKVIGTVCCIC
+sp|Q8BZN2|KCNV1_MOUSE      GISIFSTIEYFAEQSIPDTTFTSVPCAWWWATTSMTTVGYGDIRPDTTTGKIVAFMCILS
+                           *: ***:: ****:.  **.*.*:* *:***  :********* * *: **::. :* :.
+
+sp|P17970|KCNAB_DROME      GVLVVALPIPIIVNNFAEFYKNQMRREKALKRREALDRAKREGSIVSFHHINLKDAFAKS
+sp|Q8BZN2|KCNV1_MOUSE      GILVLALPIAIINDRFSACYFTLKLKEAAVRQREALKKLTKNIATDSYISVNLRDVYARS
+                           *:**:**** ** :.*:  * .   :* *:::****.: .:: :  *:  :**:*.:*:*
+
+sp|P17970|KCNAB_DROME      MDLIDVIVDTGKQTNVVHPKGKRQSTPNIGRQTLDVQSAPGHNLSQTDGNSTEGESTSGR
+sp|Q8BZN2|KCNV1_MOUSE      IMEMLRL--KGRERASTR---------SSGGDDFWF------------------------
+                           :  :  :  .*::   .:         . * : : .                        
+
+sp|P17970|KCNAB_DROME      NPATTGTGCYKNYDHVANLRNSNLHNRRGSSSEQDAVPPYSFDNPNARQTSMMAMESYRR
+sp|Q8BZN2|KCNV1_MOUSE      ------------------------------------------------------------
+                                                                                       
+
+sp|P17970|KCNAB_DROME      EQQALLQQQQQQQQQMLQMQQIQQKAPNGNGGATGGGVANNLAMVAASSAATAVATATNA
+sp|Q8BZN2|KCNV1_MOUSE      ------------------------------------------------------------
+                                                                                       
+
+sp|P17970|KCNAB_DROME      SNASNTAPGSEGAEGGGDGDGGGVDDDNLSQAKGLPIQMMITPGEVAELRRQVALENLQN
+sp|Q8BZN2|KCNV1_MOUSE      -----------------------------------  -------------------------
+                                                                                       
+
+sp|P17970|KCNAB_DROME      QRMDNLEQDVPVEFECCFCTTKGLPGCHGECIPLRANSV
+sp|Q8BZN2|KCNV1_MOUSE      ---------------------------------------
+                                                                  

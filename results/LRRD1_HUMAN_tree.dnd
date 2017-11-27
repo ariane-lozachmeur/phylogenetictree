@@ -14,22 +14,10 @@ sp|Q80TE7|LRRC7_MOUSE
 ,
 (
 (
-(
 sp|Q80VQ1-3|LRRC1_MOUSE,
 (
 sp|Q80VQ1|LRRC1_MOUSE,
 sp|Q9BTT6|LRRC1_HUMAN
-)
-
-)
-,
-(
-sp|Q54AX5|LRRA_DICDI,
-(
-sp|A6H6A4|LRIQ4_MOUSE,
-sp|A6NIV6|LRIQ4_HUMAN
-)
-
 )
 
 )
@@ -44,6 +32,7 @@ sp|Q4R6F0|LRRD1_MACFA
 
 )
 ,
+(
 (
 (
 (
@@ -83,6 +72,17 @@ sp|Q9UQ13|SHOC2_HUMAN
 
 )
 
+)
+
+)
+
+)
+,
+(
+sp|Q54AX5|LRRA_DICDI,
+(
+sp|A6H6A4|LRIQ4_MOUSE,
+sp|A6NIV6|LRIQ4_HUMAN
 )
 
 )
