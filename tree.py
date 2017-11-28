@@ -33,8 +33,10 @@ class Tree:
 
 
     def set_children(self, left, right):
-        self.left = left
-        self.right = right
+        self.left = left[0]
+        self.dleft = left[1]
+        self.right = right[0]
+        self.dright = right[1]
 
 
     def depth(self):
@@ -57,8 +59,7 @@ class Tree:
                       
         return profile        
 
-
-    # def distance(self, tree):
+      # def distance(self, tree):
         # if str(self.id)<str(tree.id):
         #     l1 = len(self.msa)
         # else:
@@ -84,49 +85,59 @@ class Tree:
         # os.remove('tmp.fa')
         # return dist
 
-    def distance(self, tree):
+    def distance(self, tree, mode):
         d = 0
 
         if str(self.id)<str(tree.id):
-            test = True
+            self_is_first = True
         else:
-            test = False
+            self_is_first = False
 
         for s in tree.msa:
-            d += self.score_seq(s, test)
+            d += self.score_seq(s, self_is_first, mode=mode)
 
         for s in self.msa:
-            d += tree.score_seq(s, not test)
+            d += tree.score_seq(s, not self_is_first, mode=mode)
 
         dist = float(d)/float(len(self.msa)*len(tree.msa))
 
-        return dist
+        return -dist
 
-    def score_seq(self, s, test):
+
+    def score_seq(self, s, self_is_first, mode):
         d = 0
         seqs = self.msa.format("fasta") + s.format("fasta")
 
-        with open("tmp.fa","w") as f:
-            f.write(seqs)
+        if mode == 'seqs':
+            # If the input was unaligned sequences, we need to align them using MUSCLE.
+            with open("tmp.fa","w") as f:
+                f.write(seqs)
 
-        muscle_cline = MuscleCommandline(input="tmp.fa")
-        child = subprocess.Popen(str(muscle_cline),stdout=subprocess.PIPE,stderr=subprocess.PIPE, universal_newlines=True, shell=(sys.platform!="win32"))
-        align = AlignIO.read(child.stdout, "fasta")
-        align.sort()
+            muscle_cline = MuscleCommandline(input="tmp.fa")
+            child = subprocess.Popen(str(muscle_cline),stdout=subprocess.PIPE,stderr=subprocess.PIPE, universal_newlines=True, shell=(sys.platform!="win32"))
+            align = AlignIO.read(child.stdout, "fasta")
+            align.sort()
 
-        if test:
+        elif mode == 'msa':
+            # Else we use the alignment of the initial MSA.
+            align = self.msa[:,:]
+            align.append(s)
+
+            self_is_first = True
+        else:
+            raise ValueError('The mode must be either seqs if the input is a list of unaligned sequences or msa if the input is an MSA')
+
+        if self_is_first:
             s2 = align[-1]
-            for s1 in align[:len(self.msa)]:
-                d += blosum_score(s1.seq,s2.seq)
+            d = blosum_score(align[:len(self.msa)],s2.seq)
         else:
             s2 = align[0]
-            for s1 in align[1:]:
-                d += blosum_score(s1.seq,s2.seq)
+            d = blosum_score(align[1:],s2.seq)
 
         return d
 
 
-    def centroid(self,tree,i):
+    def centroid(self,tree,i,mode):
         for s in self.msa:
             s.id = str(i) + s.id
 
@@ -134,38 +145,35 @@ class Tree:
             s.id = str(i) + s.id
         seqs = self.msa.format("fasta") + tree.msa.format("fasta")
        
-        with open("tmp.fa","w") as f:
-            f.write(seqs)
-        
-        muscle_cline = MuscleCommandline(input="tmp.fa")
-        child = subprocess.Popen(str(muscle_cline),stdout=subprocess.PIPE,stderr=subprocess.PIPE, universal_newlines=True, shell=(sys.platform!="win32"))
-        align = AlignIO.read(child.stdout, "fasta")
+        if mode == 'seqs':
+        # If the input was unaligned sequences, we need to align them using MUSCLE.
+            with open("tmp.fa","w") as f:
+                f.write(seqs)
+            
+            muscle_cline = MuscleCommandline(input="tmp.fa")
+            child = subprocess.Popen(str(muscle_cline),stdout=subprocess.PIPE,stderr=subprocess.PIPE, universal_newlines=True, shell=(sys.platform!="win32"))
+            align = AlignIO.read(child.stdout, "fasta")
+        elif mode == 'msa':
+            align = self.msa[:,:]
+            align.extend(tree.msa)
+        else:
+            raise ValueError('The mode must be either seqs if the input is a list of unaligned sequences or msa if the input is an MSA')
         
         return Tree(i, align, left=self, right=tree)
 
                 
 
-def blosum_score(seq1, seq2, gap_creation = -4, gap_extension = -2):
+def blosum_score(msa, seq, gap_creation = -4, gap_extension = -2):
     blosum = pd.read_csv('blosum62.txt',sep='\t', header=0, index_col=0)
     score = 0
     gapped = False
-    for i in range(len(seq1)):
-        if seq1[i] == '-':
-            if gapped == 1:
-                score += gap_extension
-            else:
-                score += gap_creation
-                gapped = 1
-        elif seq2[i] == '-':
-            if gapped == 2:
-                score += gap_extension
-            else:
-                score += gap_creation
-                gapped = 2
+    profile = []
+    for i in range(msa.get_alignment_length()):
+        profile.append(dict(collections.Counter(msa[:,i])))
 
-        else:
-            gapped = False
-            score += blosum.loc[seq1[i],seq2[i]]
+    for j in range(msa.get_alignment_length()):
+        for residue in profile[j]:
+            score+= profile[j][residue]/len(msa) * blosum.loc[residue,seq[j]]
 
     return score   
 

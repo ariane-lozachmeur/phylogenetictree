@@ -1,22 +1,38 @@
 from ete3 import Tree
+import pandas as pd
+from Bio import Phylo
 
-target = 'MYD88_HUMAN'
+def show_tree(newick, name=None):
+    if name:
+        filename = name+'_tree.dnd'
+    else:
+        filename = 'tree.dnd'
+    handle = open('results/'+filename,'w')
+    handle.write(newick)
+    handle.close()
 
-t1 = Tree(open('results/'+target+'_uniprot.dnd').read())
-t2 = Tree(open('results/'+target+'_tree.dnd').read())
-t3 = Tree(open('results/'+target+'_mafft.dnd').read())
+    tree = Phylo.read('results/'+filename, "newick")
+    # Phylo.draw_ascii(tree)
+    Phylo.draw(tree)
 
-rf, max_rf, common_leaves, parts_t1, parts_t2, i, j = t1.robinson_foulds(t2, unrooted_trees=True)
+prots = ['LRRD1','TRAF6','KCNB2']
+methods = ['single_tree','average_tree','centroid_tree','muscle','mafft']
+results = pd.DataFrame( )
+for p in prots:
+    t1 = Tree(open('results/'+p+'_uniprot.dnd').read())
+    print(p,'uniprot')
+    Phylo.draw(Phylo.read('results/'+p+'_uniprot.dnd', "newick"))
+    scores = []
+    for m in methods:
+        print(p,m)
+        t2 = Tree(open('results/'+p+'_'+m+'.dnd').read())
+        Phylo.draw(Phylo.read('results/'+p+'_'+m+'.dnd', "newick"))
+        rf, max_rf, common_leaves, parts_t1, parts_t2, i, j = t1.robinson_foulds(t2, unrooted_trees=True)
+        scores.append(float(rf)/float(max_rf))
 
-print("Perso: RF distance is %s over a total of %s" %(rf, max_rf))
-print("Number of branches in tree2 and not in tree1: ", len(parts_t1 - parts_t2))
-print("Number of branches in tree1 and not in tree2: ", len(parts_t2 - parts_t1))
+    results = results.append(pd.Series(scores,name=p))
 
-print(i)
-print(j)
-
-f, max_rf, common_leaves, parts_t1, parts_t2, i, j = t1.robinson_foulds(t3, unrooted_trees=True)
-
-print("MAFFT: RF distance is %s over a total of %s" %(rf, max_rf))
-print("Number of branches in tree2 and not in tree1: ", len(parts_t1 - parts_t2))
+results.columns = methods
+print(results)
+results.to_csv('results/benchmark_results.csv')
 

@@ -10,6 +10,7 @@ from Bio.SubsMat.MatrixInfo import blosum62
 from Bio.Cluster import treecluster
 import matplotlib
 
+from Bio import AlignIO
 from Bio.Cluster import treecluster
 import ete3
 from Bio import Phylo
@@ -19,13 +20,12 @@ from Bio.Alphabet import IUPAC
 from Bio.Align import AlignInfo
 from Bio.Align import MultipleSeqAlignment
 
+import time
 
-def init_clusters(sequences=None, MSA=None):
-    if sequences:
-        print('Starting init clusters')
-        return {i : perso.Tree(sequences[i].id, MultipleSeqAlignment([sequences[i]])) for i in range(len(sequences))}
-    else:
-        return None
+
+def init_clusters(sequences):
+    return {i : perso.Tree(sequences[i].id, MultipleSeqAlignment([sequences[i]])) for i in range(len(sequences))}
+
 
 
 def blosum_score(seq1, seq2, gap_creation = -4, gap_extension = -2):
@@ -64,11 +64,7 @@ def compute_distances(clusters, update=None, dist=None, mode='seqs'):
 
         for k in clusters.keys():
             if not new_id == k:
-                if mode = 'seqs':
-                    d = clusters[new_id].distance(clusters[k])
-                elif mode == 'msa':
-                    pass
-                    # TODO: figure out what to do
+                d = clusters[new_id].distance(clusters[k], mode=mode)
                 matrix.loc[new_id,k] = d
                 matrix.loc[k,new_id] = d
             else:
@@ -79,11 +75,7 @@ def compute_distances(clusters, update=None, dist=None, mode='seqs'):
         for i in clusters.keys():
             for j in clusters.keys():
                 if j > i:
-                    if mode == 'seqs':
-                        d = clusters[i].distance(clusters[j])
-                    elif mode == 'msa':
-                        # TODO : check logic
-                        d = blosum_score(clusters[i][0,:],clusters[j][0,:])
+                    d = clusters[i].distance(clusters[j], mode=mode)
                     matrix.loc[i,j] =  d
                     matrix.loc[j,i] = d  
                 elif j == i:
@@ -108,9 +100,9 @@ def toNewick(tree):
         return '(\n'+toNewick(tree.left)+',\n'+toNewick(tree.right)+'\n)\n'
 
 
-def toTreePerso(tree):
+def toTreePerso(tree, seqs):
     leaves = []
-    for s in globins:
+    for s in seqs:
         leaves.append(perso.Tree(s.id))
 
     nodes = {}
@@ -145,46 +137,55 @@ def show_tree(newick, name=None):
     handle.close()
 
     tree = Phylo.read('results/'+filename, "newick")
-    Phylo.draw_ascii(tree)
+    # Phylo.draw_ascii(tree)
     Phylo.draw(tree)
 
 def main(file, mode, type, dist):
-
-    name = file.split('/')[-1].split('.')[0]
+    name = file.split('/')[-1].split('.')[0]+'_'+type
     if mode == 'seqs':
         seqs = list(SeqIO.parse(file, "fasta",alphabet = Alphabet.Gapped(IUPAC.protein)))
-    
+
     elif mode == 'msa':
-        # TODO: read a file in a MSA
-        seqs = None
+        align = AlignIO.read(file,'fasta')
+        seqs = align[:,:]
+    else:
+        raise ValueError('The mode must be either seqs if the input is a list of unaligned sequences or msa if the input is an MSA')
 
     if type == 'single':
-        dist = compute_distances(seqs,distance = dist, mode=mode)
+        clusters = init_clusters(seqs)
+        dist = compute_distances(clusters, dist = dist, mode=mode)
         tree = treecluster(distancematrix=dist, method='s')
-        tree = toTreePerso(tree)
+        tree = toTreePerso(tree, seqs)
+
 
     elif type == 'average':
-        dist = compute_distances(seqs,distance = dist, mode=mode)
+        clusters = init_clusters(seqs)
+        dist = compute_distances(clusters,dist = dist, mode=mode)
         tree = treecluster(distancematrix=dist, method='a')
-        tree = toTreePerso(tree)
+        tree = toTreePerso(tree, seqs)
 
     elif type == 'centroid':
+        # print("Initialisation...")
         clusters = init_clusters(seqs)
+        # print("Clusters created")
         dist = compute_distances(clusters)
+        # print("Distances initialized")
         cluster_id = -1
+        # print("Initialisation over")
         while not len(clusters) == 1:
+            # print("There are currently %s clusters" %len(clusters))
             # select the minimum of distances
-            maxs = dist.idxmax()
+            mins = dist.idxmin()
             i1,i2 = -1,-1
-            m = -math.inf
-            for i in maxs.index:
-                if dist.loc[i,maxs[i]]>m:
+            m = +math.inf
+            for i in mins.index:
+                if dist.loc[i,mins[i]]<m:
                     i1 = i
-                    i2 = maxs[i]
-                    m = dist.loc[i,maxs[i]]
+                    i2 = mins[i]
+                    m = dist.loc[i,mins[i]]
 
             # define the centroid of the new cluster from the previous clusters
-            new_tree = clusters[i1].centroid(clusters[i2],i=cluster_id)
+            new_tree = clusters[i1].centroid(clusters[i2],i=cluster_id, mode=mode)
 
             # remove the clustered we joined of the cluster list 
             del clusters[i1]
@@ -193,14 +194,24 @@ def main(file, mode, type, dist):
             clusters[cluster_id] = new_tree
 
             # Update the distances
-            dist = compute_distances(clusters, update=(i1,i2,cluster_id), dist=dist)
-            cluster_id += -1        
+            dist = compute_distances(clusters, update=(i1,i2,cluster_id), dist=dist, mode=mode)
+            cluster_id += -1 
+            tree = clusters[list(clusters.keys())[0]]
 
-    tree = clusters[list(clusters.keys())[0]]
+
+    else:
+        raise ValueError('The type of clustering must be either single, averzage or centroid')
+
     newick = toNewick(tree) + ';'
     show_tree(newick, name=name)
 
 
 if __name__ == "__main__":
 
-    main("test/globins.fa", mode='seqs', type="centroid", dist='blosum')
+    for t in ['single','average','centroid']:
+        for file in ['KCNB2','LRRD1','TRAF6']:
+            print(t,file)
+            start = time.time()
+            main("test/"+file+".fa", mode='seqs', type=t, dist='blosum')
+            end = time.time()
+            print(end-start)
