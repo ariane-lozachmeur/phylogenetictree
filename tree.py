@@ -1,30 +1,23 @@
-import numpy as np
-import math
-import pandas as pd
-import Bio
-from Bio import pairwise2
-from Bio import SeqIO
-from Bio.Seq import Seq
-from Bio.SeqRecord import SeqRecord
-from Bio.SubsMat.MatrixInfo import blosum62
-from Bio.Cluster import treecluster
-import collections
-from copy import copy
 import sys
+import collections
+import subprocess
+from copy import copy
 
-from Bio.Alphabet import generic_dna
+import numpy as np
+import pandas as pd
+
+from Bio import AlignIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from Bio.Align import MultipleSeqAlignment
-from Bio import AlignIO
-
-import subprocess
 from Bio.Align.Applications import MuscleCommandline
 
-import matplotlib.pyplot as plt 
-import os
 
+# The class Tree allows the progressive construction of the tree. Each tree is a cluster.
 class Tree:
+
+    # msa is an MultipleSeqAlignment containing all the sequences of the cluster
+    # Left and right are the 2 clusters/trees merged to create the current tree.
     def __init__(self, i, msa=None, left=None, right=None):
         self.id = i
         self.msa = msa
@@ -39,6 +32,7 @@ class Tree:
         self.dright = right[1]
 
 
+    # The depth of the tree represents the number of children it has 
     def depth(self):
         if self.left == None and self.right == None:
             return 0
@@ -46,98 +40,8 @@ class Tree:
         else:
             return 1 + max(self.left.depth(),self.right.depth())
 
-
-    def get_profile(self, seqs = None):
-        profile = []
-        if seqs == None:
-            for i in range(self.msa.get_alignment_length()):
-                profile.append(dict(collections.Counter(self.msa[:,i])))
-
-        else:
-            for i in range(self.msa.get_alignment_length()):
-                profile.append(dict(collections.Counter(self.msa[seqs[0]:seqs[1],i])))      
-                      
-        return profile        
-
-      # def distance(self, tree):
-        # if str(self.id)<str(tree.id):
-        #     l1 = len(self.msa)
-        # else:
-        #     l1 = len(tree.msa)
-        # score = 0
-        # seqs = self.msa.format("fasta") + tree.msa.format("fasta")
-        
-        # with open("tmp.fa","w") as f:
-        #     f.write(seqs)
-        
-        # muscle_cline = MuscleCommandline(input="tmp.fa")
-        # child = subprocess.Popen(str(muscle_cline),stdout=subprocess.PIPE,stderr=subprocess.PIPE, universal_newlines=True, shell=(sys.platform!="win32"))
-        # align = AlignIO.read(child.stdout, "fasta")
-        # align.sort()
-
-        # for s1 in align[:l1]:
-        #     for s2 in align[l1:]:
-        #         score += blosum_score(s1.seq,s2.seq)
-        # dist = float(score)/float(len(self.msa)*len(tree.msa))
-
-        
-                
-        # os.remove('tmp.fa')
-        # return dist
-
-    def distance(self, tree, mode):
-        d = 0
-
-        if str(self.id)<str(tree.id):
-            self_is_first = True
-        else:
-            self_is_first = False
-
-        for s in tree.msa:
-            d += self.score_seq(s, self_is_first, mode=mode)
-
-        for s in self.msa:
-            d += tree.score_seq(s, not self_is_first, mode=mode)
-
-        dist = float(d)/float(len(self.msa)*len(tree.msa))
-
-        return -dist
-
-
-    def score_seq(self, s, self_is_first, mode):
-        d = 0
-        seqs = self.msa.format("fasta") + s.format("fasta")
-
-        if mode == 'seqs':
-            # If the input was unaligned sequences, we need to align them using MUSCLE.
-            with open("tmp.fa","w") as f:
-                f.write(seqs)
-
-            muscle_cline = MuscleCommandline(input="tmp.fa")
-            child = subprocess.Popen(str(muscle_cline),stdout=subprocess.PIPE,stderr=subprocess.PIPE, universal_newlines=True, shell=(sys.platform!="win32"))
-            align = AlignIO.read(child.stdout, "fasta")
-            align.sort()
-
-        elif mode == 'msa':
-            # Else we use the alignment of the initial MSA.
-            align = self.msa[:,:]
-            align.append(s)
-
-            self_is_first = True
-        else:
-            raise ValueError('The mode must be either seqs if the input is a list of unaligned sequences or msa if the input is an MSA')
-
-        if self_is_first:
-            s2 = align[-1]
-            d = blosum_score(align[:len(self.msa)],s2.seq)
-        else:
-            s2 = align[0]
-            d = blosum_score(align[1:],s2.seq)
-
-        return d
-
-
-    def centroid(self,tree,i,mode):
+    # Creates the centroid between two trees.
+    def centroid(self,tree,i,type):
         for s in self.msa:
             s.id = str(i) + s.id
 
@@ -145,32 +49,96 @@ class Tree:
             s.id = str(i) + s.id
         seqs = self.msa.format("fasta") + tree.msa.format("fasta")
        
-        if mode == 'seqs':
         # If the input was unaligned sequences, we need to align them using MUSCLE.
+        if type == 'seqs':
             with open("tmp.fa","w") as f:
                 f.write(seqs)
             
             muscle_cline = MuscleCommandline(input="tmp.fa")
             child = subprocess.Popen(str(muscle_cline),stdout=subprocess.PIPE,stderr=subprocess.PIPE, universal_newlines=True, shell=(sys.platform!="win32"))
             align = AlignIO.read(child.stdout, "fasta")
-        elif mode == 'msa':
+        
+        # Else we use the alignment of the initial MSA
+        elif type == 'msa':
             align = self.msa[:,:]
             align.extend(tree.msa)
         else:
-            raise ValueError('The mode must be either seqs if the input is a list of unaligned sequences or msa if the input is an MSA')
+            raise ValueError('The type must be either seqs if the input is a list of unaligned sequences or msa if the input is an MSA')
         
+        # Return the centroid as a tree
         return Tree(i, align, left=self, right=tree)
 
-                
 
-def blosum_score(msa, seq, gap_creation = -4, gap_extension = -2):
+    # Computes the distance between the two trees
+    def distance(self, tree, type):
+        score = 0
+
+        # The self_is_first variable is used to determined which MSA's sequences will be first in the new sorted MSA
+        # To make sure the sequences stay grouped in the new MSA we use the Tree's id
+        if str(self.id)<str(tree.id):
+            self_is_first = True
+        else:
+            self_is_first = False
+
+        # We score each sequence of the second MSA against the first MSA
+        for s in tree.msa:
+            score += self.score_seq(s, self_is_first, type=type)
+
+        # We score each sequence of the first MSA against the second MSA
+        for s in self.msa:
+            score += tree.score_seq(s, not self_is_first, type=type)
+
+        # The distance is the opposite of the score (to have a small distance of close MSA). 
+        # We also divide by the number of sequences in the MSA to prevent the large clusters to have larger distances.
+        dist = -float(score)/float(len(self.msa)*len(tree.msa))
+
+        return dist
+
+
+    def score_seq(self, s, self_is_first, type):
+        score = 0
+        seqs = self.msa.format("fasta") + s.format("fasta")
+
+        # If the input was unaligned sequences, we need to align them using MUSCLE.
+        if type == 'seqs':
+            with open("tmp.fa","w") as f:
+                f.write(seqs)
+
+            muscle_cline = MuscleCommandline(input="tmp.fa")
+            child = subprocess.Popen(str(muscle_cline),stdout=subprocess.PIPE,stderr=subprocess.PIPE, universal_newlines=True, shell=(sys.platform!="win32"))
+            align = AlignIO.read(child.stdout, "fasta")
+            align.sort()
+        
+        # Else we use the alignment of the initial MSA.
+        elif type == 'msa':
+            align = self.msa[:,:]
+            align.append(s)
+            self_is_first = True
+
+        else:
+            raise ValueError('The type must be either seqs if the input is a list of unaligned sequences or msa if the input is an MSA')
+
+        # After aligning sequences we score the alignment using the blosum_score function
+        if self_is_first:
+            s2 = align[-1]
+            score = blosum_score(align[:len(self.msa)],s2.seq)
+        else:
+            s2 = align[0]
+            score = blosum_score(align[1:],s2.seq)
+
+        return score
+                
+# Computes the score of the alignment between a sequence and an MSA (described in scoring section of the report)
+def blosum_score(msa, seq, gap_creation = -4):
+    # Load the BL62 matrix
     blosum = pd.read_csv('blosum62.txt',sep='\t', header=0, index_col=0)
     score = 0
-    gapped = False
     profile = []
+    # Creation of the MSA's profile
     for i in range(msa.get_alignment_length()):
         profile.append(dict(collections.Counter(msa[:,i])))
 
+    # Scoring according to the formula in the report
     for j in range(msa.get_alignment_length()):
         for residue in profile[j]:
             score+= profile[j][residue]/len(msa) * blosum.loc[residue,seq[j]]

@@ -103,7 +103,6 @@ def align(s1,s2):
     gap_status = None  
     blosum = pd.read_csv('blosum62.txt',sep='\t', header=0, index_col=0)
     F = get_score_matrix(s1, s2, blosum, gap)
-    print(F)
     A = ""
     B = ""
     i = len(s1)
@@ -244,19 +243,22 @@ def show(alignment):
 
 if __name__ == '__main__':
 
-    s1 = SeqRecord(Seq(s1))
-    s2 = SeqRecord(Seq(s2))
-
-    s3 = SeqRecord(Seq('SEND'))
-    s4 = SeqRecord(Seq('STND'))
-    s5 = SeqRecord(Seq('ASENDZ'))
-    s6 = SeqRecord(Seq('ASE-DG'))
-
     gap = (-4,-4)
     blosum = pd.read_csv('blosum62.txt',sep='\t', header=0, index_col=0)
-
-    alignment = align_v2(MSA([s3,s4]),MSA([s5,s6]))
+    from Bio import SeqIO
+    seqs = []
+    for record in SeqIO.parse("test/KCNB2.fa", "fasta"):
+        seqs.append(record)
+        
+    import time
+    start = time.time()
+    print(len(seqs[0].seq))
+    print(len(seqs[5].seq))
+    alignment = align(seqs[0].seq,seqs[5].seq)
+    end = time.time()
     print(alignment)
+
+    print('Time:', end-start)
 
 # TODO: visulisation des MSA
 #       lecture des sequences par fichier
