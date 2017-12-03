@@ -6,6 +6,8 @@ from copy import copy
 import numpy as np
 import pandas as pd
 
+from io import StringIO
+
 from Bio import AlignIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
@@ -54,9 +56,19 @@ class Tree:
             with open("tmp.fa","w") as f:
                 f.write(seqs)
             
+            # print('Load cmd line')
+            # muscle_cline = MuscleCommandline(input="tmp.fa")
+            # print('Build child')
+            # child = subprocess.Popen(str(muscle_cline),stdout=subprocess.PIPE,stderr=subprocess.PIPE, universal_newlines=True, shell=(sys.platform!="win32"))
+            # print('Read align')
+            # print(child.stdout)
+            # align = AlignIO.read(child.stdout, "fasta")
+            # print('End read align')
+
             muscle_cline = MuscleCommandline(input="tmp.fa")
-            child = subprocess.Popen(str(muscle_cline),stdout=subprocess.PIPE,stderr=subprocess.PIPE, universal_newlines=True, shell=(sys.platform!="win32"))
-            align = AlignIO.read(child.stdout, "fasta")
+            stdout, stderr = muscle_cline()
+            align = AlignIO.read(StringIO(stdout), "fasta")
+            print(align)
         
         # Else we use the alignment of the initial MSA
         elif type == 'msa':

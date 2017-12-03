@@ -19,7 +19,7 @@ import tree as perso
 # Choose among centroid, single and average
 methods = ['centroid']
 # Name of the dataset
-proteins = ['KCNB2','LRRD1','TRAF6']
+proteins = ['TLR']
 # Choose among fa (for a list of sequences) and msa
 inputs = ['fa']
 
