@@ -1,0 +1,37 @@
+#include "qscore.h"
+
+void Usage()
+	{
+	fprintf(stderr,
+"\n"
+"qscore v1.1\n"
+"\n"
+"Usage:\n"
+"   qscore -test <testaln> -ref <refaln>\n"
+"\n"
+"Test and reference files must be multiple alignments in FASTA format.\n"
+"Only columns with upper-case letters are compared.\n"
+"Results are written to standard output as one line in this format:\n"
+"\n"
+"Options\n"
+"\n"
+"-truncname\n"
+"    Truncate FASTA annotations at the first whitespace character.\n"
+"    Default is to include the entire annotation; trailing whitespace\n"
+"    is always deleted.\n"
+"\n"
+"-ignoretestcase, -ignorerefcase\n"
+"    Include all columns of the test or reference alignment, ignoring\n"
+"    upper/lower case\n."
+"\n"
+"Test=%%s;Ref=%%s;Q=%%.3g;Modeler=%%.3g;Cline=%%.3g;TC=%%.3g\n"
+"\n"
+"Fields are:\n"
+"   Test      Test file name, i.e. <testaln>\n"
+"   Ref       Reference file name, i.e. <refaln>\n"
+"   Q         PREFAB Q score, same as Balibase SP and 'Developer' score f_D\n"
+"   Modeler   'Modeler' score f_M [Sauder et al., Proteins 40, p.6]\n"
+"   Cline     Shift score [Cline et al., Bioinformatics 18(2) p.306]\n"
+"   TC        Balibase Total Column score\n"
+	);
+	}

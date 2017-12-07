@@ -1,48 +1,23 @@
+import time
+import math
+import os
+
 import numpy as np
 import pandas as pd
 
+from Bio import SeqIO, pairwise2 
 from Bio.Align import MultipleSeqAlignment as MSA
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
+from Bio.SubsMat.MatrixInfo import blosum62
 
 import collections  
 
-def get_score_matrix(s1,s2, blosum, gap):
-    F = [[0 for i in range(len(s2)+1)] for  j in range(len(s1)+1)]
-    gap_status = None
-
-    for i in range(1,len(s1)+1):
-        F[i][0] = gap[0] + gap[1]*(i-1)
-
-    for j in range(1,len(s2)+1):
-        F[0][j] = gap[0] + gap[1]*(i-1)
-
-    for i in range(1,len(s1)+1):
-        for j in range(1,len(s2)+1):
-            match = F[i-1][j-1] + blosum.loc[s1[i-1],s2[j-1]]
-            if gap_status == 'delete':
-                delete = F[i-1][j] + gap[1]
-            else:
-                delete = F[i-1][j] + gap[0]
-
-            if gap_status == 'insert':
-                insert = F[i][j-1] + gap[1]
-            else:
-                insert = F[i][j-1] + gap[0]
-
-            if match>delete and match>insert:
-                F[i][j] = match
-                gap_status = None
-            elif delete>match and delete>insert:
-                F[i][j] = delete
-                gap_status = 'delete'
-            else:
-                F[i][j] = insert
-                gap_status = 'insert'
-    return F
+from Bio import AlignIO
 
 
-def blosum_score(c1,c2):
+
+def score(c1,c2, matrix):
     p1 = dict(collections.Counter(c1))
     p2 = dict(collections.Counter(c2))
     l1 = len(c1)
@@ -56,137 +31,53 @@ def blosum_score(c1,c2):
     return score
 
 
-def get_score_matrix_msa(msa1,msa2, blosum, gap):
+def score_matrix(msa1,msa2, matrix, gap, type):
     l1 = msa1.get_alignment_length()
     l2 = msa2.get_alignment_length()
 
-    F = [[(0,'m') for i in range(l2+1)] for j in range(l1+1)]
+    F = [[({'match':0, 'Iy':0, 'Ix':0},'m') for i in range(l2+1)] for j in range(l1+1)]
     gap_status = None
 
     for i in range(1,l1+1):
-        F[i][0] = (gap[0] + gap[1]*(i-1),'d')
+        F[i][0] = ({'match':-math.inf, 'Iy':gap[0] + gap[1]*(i-1), 'Ix':-math.inf},'Iy')
 
     for j in range(1,l2+1):
-        F[0][j] = (gap[0] + gap[1]*(j-1),'i')
+        F[0][j] = ({'match':-math.inf, 'Iy':-math.inf, 'Ix':gap[0] + gap[1]*(j-1)},'Ix')
 
     for i in range(1,l1+1):
         for j in range(1,l2+1):
-            match = F[i-1][j-1][0] + blosum_score(msa1[:,i-1],msa2[:,j-1])
-            if gap_status == 'delete':
-                delete = F[i-1][j][0] + gap[1]*len(msa2)
+            match = max(F[i-1][j-1][0].values()) + score(msa1[:,i-1],msa2[:,j-1],matrix=matrix)
+            Iy = max( F[i-1][j][0]['match'] + gap[0], F[i-1][j][0]['Iy'] + gap[1])
+            Ix = max( F[i][j-1][0]['match'] + gap[0], F[i][j-1][0]['Ix'] + gap[1])
+            
+            if match>Iy and match>Ix:
+                state = 'm'
+            elif Iy>match and Iy>Ix:
+                state = 'Iy'
             else:
-                delete = F[i-1][j][0] + gap[0]*len(msa2)
+                state = 'Ix'
 
-            if gap_status == 'insert':
-                insert = F[i][j-1][0] + gap[1]*len(msa1)
-            else:
-                insert = F[i][j-1][0] + gap[0]*len(msa1)
+            F[i][j] = ({'match':match, 'Iy':Iy, 'Ix':Ix},state)
 
-            if match>delete and match>insert:
-                F[i][j] = (match,'m')
-                gap_status = None
-            elif delete>match and delete>insert:
-                F[i][j] = (delete,'d')
-                gap_status = 'delete'
-            else:
-                F[i][j] = (insert,'i')
-                gap_status = 'insert'
-            print(i,j)
-            print(match, insert, delete)
-            print(F[i][j])
-            print('--------')
+    for i in range(l1+1):
+        for j in range(l2+1):
+            F[i][j] = (max(F[i][j][0].values()),F[i][j][1])
+    
     return F
 
 
-def align(s1,s2):
-    gap = (-10,-4)
+def needleman_wunsch(msa1,msa2, gap):
+    if type(msa1) is SeqRecord:
+        msa1 = MSA([msa1])
+        msa2 = MSA([msa2])
+    elif type(msa1) is Seq:
+        msa1 = MSA([SeqRecord(msa1)])
+        msa2 = MSA([SeqRecord(msa2)])
+
     gap_status = None  
     blosum = pd.read_csv('blosum62.txt',sep='\t', header=0, index_col=0)
-    F = get_score_matrix(s1, s2, blosum, gap)
-    A = ""
-    B = ""
-    i = len(s1)
-    j = len(s2)
-    while i>0 or j>0:
-        if i>0 and j>0 and F[i][j] == F[i-1][j-1] + blosum.loc[s1[i-1],s2[j-1]]:
-            A = s1[i-1] + A
-            B = s2[j-1] + B
-            i += -1
-            j += -1
-
-        elif i>0 and (F[i][j] == F[i-1][j] + gap[0] or F[i][j] == F[i-1][j] + gap[1]):
-            A = s1[i-1] + A
-            B = '-' + B
-            i += -1
-
-        elif j>0 and (F[i][j] == F[i][j-1] + gap[0] or F[i][j] == F[i][j-1] + gap[1]):
-            A = '-' + A
-            B = s2[j-1] + B
-            j += -1
-
-        else:
-            print('Fij',F[i][j])
-            print('Fi-1j',F[i-1][j])
-            print('Fij-1',F[i][j-1  ])
-            print('Fi-1j-1',F[i-1][j-1])
-            print('match',blosum.loc[s1[i-1],s2[j-1]])
-            return None
-
-    return ([A,B],F[len(s1)][len(s2)])
-
-
-def align_msa(msa1,msa2):
-    gap = (-4,-4)
-    gap_status = None  
-    blosum = pd.read_csv('blosum62.txt',sep='\t', header=0, index_col=0)
-    F = get_score_matrix_msa(msa1, msa2, blosum, gap)
-    print(F)
-    
-    l1 = msa1.get_alignment_length()
-    l2 = msa2.get_alignment_length()
-
-    A = ["" for a in range(len(msa1))]
-    B = ["" for b in range(len(msa2))]
-
-    i = l1
-    j = l2
-
-    while i>0 or j>0:
-        if i>0 and j>0 and F[i][j] == F[i-1][j-1] + blosum_score(msa1[:,i-1],msa2[:,j-1]):
-            A = [msa1[a,i-1] + A[a] for a in range(len(msa1))]
-            B = [msa2[b,j-1] + B[b] for b in range(len(msa2))]
-            i += -1
-            j += -1
-
-        elif i>0 and (F[i][j] == F[i-1][j] + gap[0] or F[i][j] == F[i-1][j] + gap[1]*l2):
-            A = [msa1[a,i-1] + A[a] for a in range(len(msa1))]
-            B = ['-' + B[b] for b in range(len(msa2))]
-            i += -1
-
-        elif j>0 and (F[i][j] == F[i][j-1] + gap[0] or F[i][j] == F[i][j-1] + gap[1]*l1):
-            A = ['-' + A[a] for a in range(len(msa1))]
-            B = [msa2[b,j-1] + B[b] for b in range(len(msa2))]
-            j += -1
-
-        else:
-            print(i,j)
-            print('Fij',F[i][j])
-            print('Fi-1j',F[i-1][j])
-            print('Fij-1',F[i][j-1  ])
-            print('Fi-1j-1',F[i-1][j-1])
-            print(A)
-            print(B)
-            return None
-
-    return ([A,B],F[l1][l2])
-
-
-def align_v2(msa1,msa2):
-    gap = (-4,-4)
-    gap_status = None  
-    blosum = pd.read_csv('blosum62.txt',sep='\t', header=0, index_col=0)
-    F = get_score_matrix_msa(msa1, msa2, blosum, gap)
-    print(F)
+    F = score_matrix(msa1, msa2, matrix = blosum, gap = gap, type='needleman')
+    # print(F)
     
     l1 = msa1.get_alignment_length()
     l2 = msa2.get_alignment_length()
@@ -204,62 +95,142 @@ def align_v2(msa1,msa2):
             i += -1
             j += -1
 
-        elif F[i][j][1] == 'd':
+        elif F[i][j][1] == 'Iy':
             A = [msa1[a,i-1] + A[a] for a in range(len(msa1))]
             B = ['-' + B[b] for b in range(len(msa2))]
             i += -1
 
-        elif F[i][j][1] == 'i':
+        elif F[i][j][1] == 'Ix':
             A = ['-' + A[a] for a in range(len(msa1))]
             B = [msa2[b,j-1] + B[b] for b in range(len(msa2))]
             j += -1
 
         else:
-            print(i,j)
-            print('Fij',F[i][j])
-            print('Fi-1j',F[i-1][j])
-            print('Fij-1',F[i][j-1  ])
-            print('Fi-1j-1',F[i-1][j-1])
-            print(A)
-            print(B)
+            print(F[i][j][1])
             return None
+    msa = MSA([SeqRecord(Seq(A[a]),id=msa1[a].id) for a in range(len(A))])
+    B = MSA([SeqRecord(Seq(B[b]),id=msa2[b].id) for b in range(len(B))])
 
-    return ([A,B],F[l1][l2]) 
+    msa.extend(B)
+    return (msa,F[l1][l2][0]) 
 
 
-def show(alignment):
-    s1 = alignment[0][0]
-    s2 = alignment[0][1]
-    score = alignment[1]
+def show(align1, align2, title=None):
+    if title:
+        print('Alignment : ' + title)
 
-    for i in range(int(len(s1)/60)):
-        print('sp|P17970|KCNAB_DROME      ',s1[i*60:(i+1)*60])
-        print('sp|Q8BZN2|KCNV1_MOUSE      ',s2[i*60:(i+1)*60],'\n\n\n')
+    l1 = align1.get_alignment_length()
+    l2 = align2.get_alignment_length()
+    l = max(l1,l2)
+    i = 0
+    for i in range(int(l/60)):
+        for s in align1:
+            print(s.id+'_1      ',s.seq[i*60:(i+1)*60])
+        print()
 
-    print('sp|P17970|KCNAB_DROME      ',s1[int(len(s1)/60)*60:])
-    print('sp|Q8BZN2|KCNV1_MOUSE      ',s2[int(len(s1)/60)*60:],'\n\n\n')
+        for s in align2:
+            print(s.id+'_2      ',s.seq[i*60:(i+1)*60])
+        print('\n')
 
+    for s in align1:
+        print(s.id+'_1      ',s.seq[(i+1)*60:])
+    print('\n')
+
+    for s in align2:
+        print(s.id+'_2      ',s.seq[(i+1)*60:])
+    print('\n')
+    print('************************************************************')
+
+
+    
+def compare_align(align1,align2):
+    align1.sort()
+    align2.sort()
+
+    identity = 0
+    l1 = align1.get_alignment_length()
+    l2 = align2.get_alignment_length()
+
+    pos_1 = [0 for a in range(len(align1))]
+    pos_2 = [0 for b in range(len(align2))]
+    
+    columns_1 = []
+    columns_2 = []
+
+    for i in range(l1):
+        for a in range(len(align1)):
+            if not align1[a][i] == '-':
+                pos_1[a] += 1
+        columns_1.append([pos_1[k] for k in range(len(pos_1))])
+
+    for j in range(l2):
+        for b in range(len(align2)):
+            if not align2[b][j] == '-':
+                pos_2[b] += 1
+        columns_2.append([pos_2[k] for k in range(len(pos_2))])
+        
+    TP = 0
+    FP = 0
+
+    for c1 in columns_1:
+        if c1 in columns_2:
+            TP += 1
+            columns_2.remove(c1) 
+        else:
+            FP += 1
+
+    FN = len(columns_2)
+    recall = float(TP) / float(TP + FN)
+    precision = float(TP) / float(TP + FP)
+    show(align1, align2)
+    print('FN=',FN, 'FP=', FP, 'TP=', TP)
+    print('Recall = %s ; precision = %s' %(recall,precision))
+    return (recall,precision)
+
+
+def identity(s1,s2):
+    ident = 0
+    for i in range(min(len(s1.seq),len(s2.seq))):
+        if s1[i] == s2[i]:
+            ident+=1
+    return float(ident)/max(len(s1.seq),len(s2.seq))
 
 
 if __name__ == '__main__':
 
-    gap = (-4,-4)
+    gap = (-10,-0.5)
     blosum = pd.read_csv('blosum62.txt',sep='\t', header=0, index_col=0)
-    from Bio import SeqIO
     seqs = []
-    for record in SeqIO.parse("test/KCNB2.fa", "fasta"):
-        seqs.append(record)
+    # print(needleman_wunsch(Seq('SEND'),Seq('AND'),gap=gap)[0])
+
+    results = []
+    for filename in os.listdir('test/prefab4/in'):
+        print(filename)
+        seqs = []
+        for record in SeqIO.parse('test/prefab4/in/'+filename, "fasta"):
+            if record.id in filename:
+                seqs.append(record)
         
-    import time
-    start = time.time()
-    print(len(seqs[0].seq))
-    print(len(seqs[5].seq))
-    alignment = align(seqs[0].seq,seqs[5].seq)
-    end = time.time()
-    print(alignment)
+        for i in range(1,len(seqs)):
+            # print('Aligning sequence 0 with sequence %s' %i)
+            start = time.time()
+            s = [seqs[0], seqs[i]]
+            alignment = needleman_wunsch(s[0],s[1], gap)
+            end = time.time()
 
-    print('Time:', end-start)
-
-# TODO: visulisation des MSA
-#       lecture des sequences par fichier
-#        
+            real = AlignIO.read('test/prefab4/ref/'+filename, "fasta")
+            # for s in real:
+            #     s.seq = Seq(str(s.seq).replace('.','-').upper())
+            # start2 = time.time()
+            # recall,precision = compare_align(alignment[0],real)    
+            # end2 = time.time()
+            # time_align = end-start
+            
+            # results.append([filename,recall,precision,time_align])
+            results.append([filename,alignment[1]])
+            # print('Time alignment:', end-start)
+            # print('Time comparison:', end2-start2)
+    df_results = pd.DataFrame(results,columns=['seq','score'])
+    df = pd.read_csv('results/alignment_benchmark2.csv')
+    df = df.merge(df_results,on='seq',how='inner')
+    df.to_csv('results/alignment_benchmark3.csv',index=False)
